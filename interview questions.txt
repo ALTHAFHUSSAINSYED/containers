@@ -1,0 +1,300 @@
+✅ Basic Networking
+Q1. How do containers inside your Docker Compose project communicate with each other?
+
+👉 In Docker Compose, when you run docker-compose up, it automatically creates a bridge network for your project.
+
+All containers in that project join the same network.
+
+Each container can reach another using its service name as the hostname.
+
+Example: Tomcat can reach MySQL by calling mysql:3306 (no need for IP).
+
+Answer to give:
+“Containers in Docker Compose communicate through an automatically created user-defined bridge network. This provides built-in DNS, so containers can talk using service names instead of IPs. For example, my Tomcat container connects to MySQL using the hostname mysql:3306.”
+
+Q2. If you want Tomcat to talk to MySQL, how does name resolution work inside Docker?
+
+👉 Docker has an embedded DNS server.
+
+Each container registers its service name in Docker’s internal DNS.
+
+When Tomcat tries mysql, Docker DNS resolves it to the container’s IP.
+
+Answer to give:
+“Docker provides an internal DNS service that resolves service names to container IPs within the same network. So when Tomcat needs to connect to MySQL, it just uses mysql:3306 and Docker handles the resolution.”
+
+✅ Port Mapping
+Q3. Why did you expose Nginx port 80 but not MySQL port 3306 in your project?
+
+👉
+
+Nginx is the frontend, it must accept requests from the outside world.
+
+MySQL is a backend service, it should only be accessed internally by Tomcat.
+
+Exposing DB ports increases security risks.
+
+Answer:
+“I exposed port 80 for Nginx because users need web access. MySQL was not exposed because it’s a backend service only needed by Tomcat inside the Docker network. This reduces the attack surface.”
+
+Q4. What risks are there if you expose your database directly to the internet?
+
+👉 Big risks:
+
+Brute-force attacks on DB credentials.
+
+SQL injection exploitation if DB is open.
+
+Unauthorized data access or leaks.
+
+Ransomware installing via open DB ports.
+
+Answer:
+“Exposing the DB to the internet is a major security risk — it allows attackers to attempt brute-force logins or exploit vulnerabilities. Best practice is to keep DB ports internal and only allow application containers to access them.”
+
+✅ Security
+Q5. How do you secure secrets like MySQL root password or RabbitMQ credentials in Docker Compose?
+
+👉 Options:
+
+Use environment variables in a .env file (ignored in .gitignore).
+
+Use Docker secrets (for Swarm/K8s).
+
+Store secrets in Vault or AWS Secrets Manager.
+
+Answer:
+“I never hardcode credentials in docker-compose.yml. Instead, I keep them in a .env file that is excluded from Git. For production, I’d use Docker secrets or a centralized secret manager like Vault or AWS Secrets Manager.”
+
+Q6. What happens if you accidentally commit credentials in your Git repo? How would you fix that?
+
+👉
+
+First, remove secrets from Git history.
+
+Use git filter-repo or BFG repo cleaner.
+
+Immediately rotate credentials (change DB passwords, regenerate keys).
+
+Answer:
+“If credentials are leaked in Git, the first step is to rotate those secrets immediately. Then, I’d purge them from the Git history using tools like git filter-repo. Going forward, I’d ensure secrets are externalized in .env or secret managers.”
+
+✅ Patch Management
+Q7. How do you keep your containers updated with the latest security patches?
+
+👉
+
+Rebuild images regularly from updated base images.
+
+Use automation in CI/CD to trigger rebuilds.
+
+Run vulnerability scanners (Trivy, Anchore).
+
+Answer:
+“I keep containers updated by regularly rebuilding them from the latest patched base images. I also integrate vulnerability scanners like Trivy into CI/CD so outdated images are flagged automatically.”
+
+Q8. If a vulnerability is found in the base image (say Ubuntu), how do you remediate it?
+
+👉
+
+Update Dockerfile to pull the latest base image.
+
+Rebuild + redeploy containers.
+
+Answer:
+“If the base image has a CVE, I update the Dockerfile to use the latest patched image, rebuild, and redeploy. In CI/CD, this can be automated so new builds always use secure base images.”
+
+✅ Advanced – Vulnerabilities
+Q9. Let’s say an Nginx container has a CVE published today. How do you identify whether your project is impacted?
+
+👉
+
+Check the Nginx version (docker exec nginx nginx -v).
+
+Compare with CVE advisory.
+
+Run image scan with Trivy/Clair/Anchore.
+
+Answer:
+“I’d first check the running Nginx version against the CVE advisory. Then I’d run vulnerability scans on my images using Trivy or Clair to confirm. If vulnerable, I’d pull the patched image from Docker Hub and redeploy.”
+
+Q10. How would you integrate vulnerability scanning into your CI/CD pipeline for this project?
+
+👉
+
+Use scanners like Trivy, Snyk, Anchore.
+
+Run them as a CI step after building the image.
+
+Fail the pipeline if critical issues found.
+
+Answer:
+“I’d integrate tools like Trivy or Snyk into the CI pipeline to scan Docker images right after build. If critical vulnerabilities are found, the pipeline fails, ensuring only secure images go to production.”
+
+✅ Advanced – Isolation & Security
+Q11. If multiple applications are running on the same Docker host, how do you ensure network isolation between projects?
+
+👉
+
+Use separate user-defined networks.
+
+Use firewall rules to restrict traffic.
+
+Answer:
+“I’d create separate Docker networks for each application, so they can’t see each other. Additionally, I’d configure firewall rules and limit port exposure to enforce strict isolation.”
+
+Q12. Can containers “escape” into the host system? What’s the risk, and how do you mitigate it?
+
+👉
+
+Yes, if there’s a kernel vulnerability.
+
+Risk: attacker gets root on host.
+
+Mitigation: run with least privileges, enable SELinux/AppArmor, keep Docker updated.
+
+Answer:
+“Container escape is possible if there’s a kernel exploit. To reduce risk, I run containers as non-root, enforce AppArmor/SELinux profiles, and keep the Docker engine updated.”
+
+✅ DNS Configuration
+Q13. Inside Docker, containers talk via service names (like mysql, tomcat). Which component provides that DNS resolution?
+
+👉 Docker’s embedded DNS server.
+
+Answer:
+“Docker’s embedded DNS server resolves service names to container IPs inside a user-defined bridge network.”
+
+Q14. If the Docker internal DNS fails, how would you troubleshoot service-to-service communication?
+
+👉
+
+Check network with docker network inspect.
+
+Test connectivity with ping, curl.
+
+Restart Docker daemon.
+
+Answer:
+“I’d first verify the Docker network configuration with docker network inspect, then test service connectivity using ping or curl. If DNS is failing, I’d restart the Docker daemon and check for conflicts with external DNS settings.”
+
+✅ DHCP
+Q15. How do containers get their IP addresses?
+
+👉 Docker has an internal DHCP-like allocator. Each container gets an IP from the bridge network’s CIDR range.
+
+Answer:
+“Containers get IP addresses automatically from Docker’s internal IPAM system, which works like a DHCP server for the bridge network.”
+
+Q16. What’s the difference between Docker bridge network and a macvlan network in terms of DHCP?
+
+👉
+
+Bridge network: Docker assigns IP internally, not visible on LAN.
+
+Macvlan: Container appears as a device on LAN, gets IP from real DHCP server.
+
+Answer:
+“In a bridge network, Docker assigns IPs internally and containers are hidden behind NAT. With a macvlan network, each container gets its own IP directly from the LAN’s DHCP server, making it look like a physical machine.”
+
+✅ Manager-Level Situational Questions
+Q17. Right now, you’re running a single Nginx. If traffic spikes suddenly, how would you scale it in Docker Compose?
+
+👉
+
+Use docker-compose up --scale nginx=3.
+
+Add load balancer (HAProxy/NGINX) in front.
+
+Answer:
+“I can scale Nginx horizontally in Docker Compose with --scale. However, for production auto-scaling, Kubernetes is more suitable.”
+
+Q18. Why might Kubernetes be a better option in that case?
+
+👉
+
+Auto-scaling.
+
+Self-healing.
+
+Service discovery + built-in load balancing.
+
+Answer:
+“Kubernetes handles scaling automatically based on traffic. It also offers self-healing and native load balancing, which Docker Compose cannot.”
+
+Q19. If your company has compliance rules (like PCI-DSS or ISO 27001), what measures would you take for database security in this project?
+
+👉
+
+Encrypt DB data at rest and in transit.
+
+Restrict DB access to app only.
+
+Audit logging + role-based access.
+
+Answer:
+“I’d secure the database with encryption at rest, enforce TLS for in-transit traffic, and restrict access to only Tomcat. I’d also enable audit logging and use role-based access control.”
+
+Q20. How would you enforce TLS/SSL between Nginx (frontend) and Tomcat (backend)?
+
+👉
+
+Generate certificates.
+
+Configure Nginx upstream with HTTPS.
+
+Answer:
+“I’d issue TLS certificates, configure Tomcat to accept HTTPS, and update Nginx to connect via HTTPS upstream. Alternatively, I’d terminate SSL at Nginx and forward traffic over an internal secure network.”
+
+Q21. Imagine Nginx goes down. How would you troubleshoot whether the problem is with Nginx itself, Docker networking, or the underlying VM?
+
+👉
+
+Check docker ps → container running?
+
+Check logs → docker logs nginx.
+
+Ping service → curl localhost:80.
+
+Check VM resources → df -h, free -m.
+
+Answer:
+“I’d check if the container is running with docker ps, then review logs. If container is fine, I’d test connectivity with curl. If still failing, I’d check VM resources or Docker networking issues.”
+
+Q22. If MySQL container gets corrupted, how do you restore the database?
+
+👉
+
+Restore from volume backup or dump (mysqldump).
+
+Use backup automation.
+
+Answer:
+“I’d restore from the last database dump or volume snapshot. In production, I’d automate MySQL backups with scheduled jobs to avoid data loss.”
+
+Q23. How would you migrate this project from Docker Compose to Kubernetes?
+
+👉
+
+Convert docker-compose.yml to K8s manifests (kompose).
+
+Define Deployments, Services, ConfigMaps, Secrets.
+
+Deploy via kubectl or Helm.
+
+Answer:
+“I’d use kompose to convert the Compose file into Kubernetes manifests, then refine it into Deployments, Services, and ConfigMaps. I’d deploy with Helm for easier lifecycle management.”
+
+Q24. What DevOps tools would you integrate (monitoring, logging, CI/CD) to make this production-ready?
+
+👉
+
+CI/CD: Jenkins/GitHub Actions.
+
+Monitoring: Prometheus + Grafana.
+
+Logging: ELK stack / Loki.
+
+Security: Trivy, Vault.
+
+Answer:
+“I’d integrate Jenkins or GitHub Actions for CI/CD, Prometheus + Grafana for monitoring, ELK for logging, and Trivy for image scanning. Secrets would be managed with Vault.”
