@@ -1,0 +1,224 @@
+containers - isolate your applications.
+Containers are introduced as a solution to isolate applications.
+
+Traditional Linux OS Setup
+File System Hierarchy: Root / with subdirectories like /boot, /bin, /var, /etc, etc.
+These contain configuration files, binaries, and libraries.
+Processes use these files (e.g., Tomcat, Nginx, MongoDB).
+Processes form a Process Tree, starting from:
+init or systemd → PID 1 → forks into other processes.
+
+Problem with Multiple Services on One System
+If Tomcat, Nginx, and MongoDB all run on the same OS:
+They share the same filesystem and libraries.
+Any change (configuration, binary, library update) can affect all processes.
+Lack of isolation causes dependency conflicts, instability, and risks.
+
+Traditional Isolation Method
+Run each service on a separate computer (physical or virtual machine).
+Each VM/Server has its own OS, filesystem, and process tree, avoiding conflicts.
+Problem: High cost (more servers = more hardware/resources needed).
+
+Solution → Containers
+Containers provide process and filesystem isolation without needing multiple machines.
+Each container:
+Is like a miniature OS, but technically just a directory.
+Has its own filesystem, binaries, libraries, and process tree.
+Example:
+Nginx container → PID 1 = Nginx process
+MongoDB container → PID 1 = MongoDB process
+Containers communicate using a virtual network inside the host system.
+
+6. Advantages of Containers
+Isolation: Services don’t affect each other.
+Lightweight: Containers don’t need a full OS, only required files.
+Portability: Containers can be archived as images and shipped anywhere (dev, test, prod).
+Consistency: Same container runs identically across environments.
+
+Container Images
+Containers can be packaged as images.
+Images can be shared and reused across machines (developer laptop → production).
+This solves the “works on my machine” problem
+
+Container Runtime / Engine
+To run containers, you need a container runtime environment.
+Works on top of:
+Hardware (physical or virtual machine)
+Operating System
+Container Engine (runtime)
+The most popular container runtime = Docker.
+
+In-Detail Understanding
+Why containers are better than VMs?
+VMs run full OS per service → heavy, resource-intensive.
+Containers share the host OS kernel → lightweight, faster, less resource usage.
+Process Isolation
+Each container’s PID 1 process = its main application.
+Separate filesystem ensures no interference.
+Portability
+Container images make apps portable, reproducible, and version-controlled.
+
+✅ In summary:
+Containers solve the dependency conflict and isolation problem in a cost-effective way compared to VMs. Each container behaves like a small OS environment but is actually just a directory with its own filesystem and process tree. Docker is the most widely used runtime to build, run, and ship containers.
+
+
+Docker :
+
+🔹 Docker Overview – Key Points
+1. What is Docker
+Docker is an open platform for:
+Developing, shipping, and running applications.
+In Docker context:
+“Application” = containerized process (like Nginx, MongoDB, etc.).
+Docker allows applications to be isolated from infrastructure, enabling:
+Faster development and deployment
+Multiple apps running on the same host without interference
+
+2. Isolation & Lightweight Nature
+Docker containers provide a loosely isolated environment:
+Each container is independent
+Multiple containers can run simultaneously on the same host
+Containers are lightweight:
+Only contain files required for that process
+Example: Nginx container only has Nginx binaries, libraries, and config
+
+3. Docker Architecture
+Docker Host: The physical or virtual machine running Docker.
+Docker Daemon:
+Service installed on Docker Host
+Responsible for building, running, and managing containers
+Docker Client:
+Command-line interface (CLI) to interact with Docker Daemon
+Can be on the same machine or a different machine
+
+4. Docker Images & Containers
+Container = running instance of an image
+Image = packaged snapshot of an application + environment
+Containers are created from images
+Commands:
+docker build → build your own image
+docker pull → pull image from Docker Registry (like Docker Hub)
+docker run → run container from an image
+
+5. Docker Hub / Registry
+Central place to store and share images
+Official and community images available:
+Python, PostgreSQL, Ubuntu, Traefik, Redis, Node, MongoDB, OpenJDK, MySQL, Golang, Nginx, etc.
+You can create your own images and push them to Docker Hub
+
+6. Summary of Docker Benefits
+
+Isolation – Multiple containers run independently
+Lightweight – Minimal files, no full OS needed per container
+Portability – Run container anywhere Docker is installed
+Rapid Deployment – Ship and deploy applications quickly
+Consistency – Same container behaves the same in dev, test, and prod
+
+🔹 How it Works in Practice
+Set up VM or physical machine → Docker Host
+Install Docker Engine (Daemon)
+Use Docker Client to:
+Pull images from Docker Hub
+Build your own images
+Run containers (docker run)
+
+✅ In short:
+Docker lets you package applications into containers that are lightweight, isolated, and portable, running anywhere without needing multiple machines. Docker Hub provides pre-built images to save time, and Docker CLI commands let you build, run, and manage containers easily.
+
+
+🔹 Docker Hands-On – Main and Important Points
+1. Setup
+Open terminal (Git Bash or Linux terminal).
+Create a working directory (e.g., F:/container) to store files.
+Download the Vagrantfile from resources.
+Vagrantfile provisions a Ubuntu 20 VM and installs Docker Engine automatically.
+
+Command to bring up VM:
+vagrant up
+SSH into VM and become root:
+vagrant ssh
+sudo -i
+Check Docker service status:
+systemctl status docker
+
+2. Running First Container
+Test Docker installation by running the hello-world container:
+docker run hello-world
+
+
+What happens:
+If image not available locally → Docker pulls from Docker Hub
+
+Container runs → prints a message → exits
+Commands to inspect Docker images and containers:
+docker images      # lists all images
+docker ps          # running containers
+docker ps -a       # all containers (including exited)
+
+3. Running Nginx Container
+Run Nginx container with port mapping and background mode:
+docker run --name web01 -d -p 9080:80 nginx
+-d → run in background (detached)
+-p hostPort:containerPort → maps host port to container port for external access
+Inspect container IP:
+docker inspect web01
+
+
+Access container from host:
+curl http://<container-IP>:80
+Access container from browser using VM IP + host port:
+
+http://<VM-IP>:9080
+4. Building Your Own Image
+Create a directory images and a Dockerfile.
+
+Dockerfile structure:
+Use a base image (e.g., Ubuntu from Docker Hub)
+Add your application files on top of it
+
+Build the image:
+docker build -t tesimg .
+-t tesimg → assigns a name to the image
+. → location of Dockerfile
+
+Verify the image:
+docker images
+Run container from your custom image with automatic host port assignment:
+docker run -d -P tesimg
+
+
+Access hosted application in browser:
+http://<VM-IP>:<host-port>
+
+5. Cleanup
+Stop running containers:
+docker stop <container_name>
+
+
+Remove containers:
+docker rm <container_name_or_ID>
+
+
+Remove images:
+docker rmi <image_ID>
+
+6. Conceptual Highlights
+
+VM vs Container
+VM hosts Docker → Containers run inside VM
+Containers are lightweight, isolated environments
+
+Port Mapping
+Host port → container port for external access
+Dockerfile
+Base image + custom application files → create your own reusable image
+Docker Hub
+Source for official and community images (Nginx, Ubuntu, Python, etc.)
+
+🔹 Summary
+Vagrant + Ubuntu VM → Docker installation automated
+Run simple test (hello-world) → confirm Docker works
+Pull official image (Nginx) → run container with port mapping
+Build custom image using Dockerfile → run application inside container
+Access container locally (IP & port) or externally via host port
+Cleanup containers and images to maintain a clean environment
